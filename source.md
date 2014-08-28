@@ -15,7 +15,7 @@ layout: false
 - SPA(Single Page Application)
 - AngularJS 소개
 - AngularJS 기본 개념
-- AngularJS 내장 기능
+- AngularJS 내부 기능 요약
 - AngularJS 내부 동작과 성능
 
 ---
@@ -117,7 +117,7 @@ A single-page application (SPA), also known as single-page interface (SPI), is a
 ---
 # Single Page Application
 
-![](img/todomvc.png)
+.img-90[ ![](img/todomvc.png) ]
 
 http://todomvc.com
 
@@ -130,8 +130,9 @@ http://todomvc.com
 # AngularJS 소개
 
 - 2009년 Misko Hevery(Googler)의 개인 프로젝트로 시작
-- 2012년 6월 Release 1.0
+- 2012년 6월 Release 1.0 (Latest Release 1.2.23)
 - 현재는 AngularJS 풀타임 개발팀이 만들어져 있음
+- 1.2x는 IE8까지 지원하지만, 1.3 이후부터는 IE8 지원하지 않음
 - Google Product에도 사용 중
 	- Youtube on PS3
 	- DoubleClick by Google
@@ -221,11 +222,12 @@ Directives, Scope, Model, View, Controller
 
 - Scope
 	- 컨트롤러나 디렉티브의 유효범위내의 저장공간(데이터, 로직)
+	- App엔 하나의 root scope가 있고, 여러개의 하위 scope가 있음
 	- 모델 변경을 감지하고 표현하기 위한 책임을 갖는다
 	- Javascript Prototype 상속 구조를 가짐
 	- Isolate Scope도 지원 (부모와 연결을 차단)
 - Model은 평범한 자바스크립트 객체
-	- 모델이 프레임워크에 의존적이지 않 (intrusive)
+	- 모델이 프레임워크에 의존적이지 않다 (intrusive)
 
 ---
 # AngularJS 기본 개념
@@ -234,7 +236,7 @@ Directives, Scope, Model, View, Controller
 
 - Module은 AngularJS가 관리하는 객체의 컨테이너 역할
 	- 코드 구조, 객체 등록, 의존 관계 선언
-- Service는 관련 있는 기능을 하나의 객체로 묶고 주입 받아서 사용
+- Service는 컨트롤러에서 뷰와 독립적인 로직을 분리하고 주입 받음
 	- 서비스 객체를 어떻게 생성할지 정의 해줘야 함
 		- value, service, factory, constant, provider
 	- Singleton
@@ -243,28 +245,120 @@ Directives, Scope, Model, View, Controller
 	- Jasmine, Karma
 
 ---
-# AngularJS 내장 기능
+# AngularJS 내부 기능 요약
 
 - 서버와 통신
-- 데이터 포맷과 출력
+- 데이터 포맷과 출력, 필터
+- 폼 데이터 조작 및 검증
 - 네비게이션 구성
+- 국제화 & 지역화
 
 ---
 # AngularJS 내부 동작과 성능
 
-- 문자열 기반의 템플릿 엔진이 아니다
+- Event Loop
+- $apply method call (모델 변경 감시 시작)
+- $digest loop (모델 변경 감시 과정)
 - CPU 사용률 최적화
 - 메모리 소비 최적화
 - ng-repeat
+
+---
+# AngularJS 내부 동작과 성능
+
+Event Loop
+
+.img-80[ ![](img/event-loop.png) ]
+
+---
+# AngularJS 내부 동작과 성능
+
+$apply method call (모델 변경 감시 시작)
+
+- Polling을 하나?? 이건 아님
+- 모델이 변경 될 만한 상황만 감시
+	- DOM 이벤트
+	- XHR 응답으로 인한 콜백
+	- 브라우저의 주소 변경
+	- 타이머로 인한 콜백
+- $apply 메소드가 호출되면서 감시가 시작되고, 보통 디렉티브에서 호출됨
+
+---
+# AngularJS 내부 동작과 성능
+
+$digest loop (모델 변경 감시 과정)
+
+- 근데 왜 $digest loop가 필요한가?
+	- 웹브라우저는 싱글 UI 스레드를 가지기 때문에 컨텍스트 스위칭이 최대한 적은 게 유리함
+	- DOM을 변경하는 작업은 매우 비싼 작업임
+- 결국, 모델이 안정화되는 가장 마지막 시점에 딱 한 번만 바꾸는 게 좋다!!
+- 모델 값의 변경 여부는 Dirty-Checking 메커니즘을 이용
+	- $watch list에 하나라도 watch가 남아있다면 dirty 상태
+	- $rootScope부터 시작해서 DFS로 모든 스코프를 순회하여 watch를 평가하고 무한 루프 방지를 위해서 10번까지만 수행
+	- 10번이 넘어도 페이지 렌더링은 되지만, 뭔가 문제가 있는 상황이므로 확인해야함
+
+---
+# AngularJS 내부 동작과 성능
+
+CPU 사용률 최적화
+
+- $digest 루프를 빠르게 (일반적으로 50ms 이내)
+	- watch를 가볍고 빠르게 만들기 (필터 로직이 무겁진 않은지)
+	- watch 표현식에서 DOM 접근하지 말것
+	- 필요 없거나, 눈에 보이지 않거나, 사용 되지 않는 watch 제거
+- $digest 루프 빈도 줄이기 -> 모델이 변경 될 만한 상황을 줄이자
+- $digest 루프의 수 제한
+	- 모델이 불안정하면 루프를 많이 실행
+	- 뭔가 이상하다고 느끼고 빨리 해결하자
+
+---
+# AngularJS 내부 동작과 성능
+
+메모리 소비 최적화
+
+- 가능하면 deep-watching 피하기
+	- 기본적으론 값만 비교하거나, 값 + 타입 비교
+	- 모델 객체가 수많은 프로퍼티를 가지고 있는데 전체 비교를 하는 건 많이 느리고, 거기다 복사 및 저장됨
+- watch의 대상이 되는 표현식의 크기 고려
+	- 아래 긴 문자열은 variable 부분만 watch를 만들지 않고 p 태그 전체에 대해서 만들게 되어 메모리를 많이 차
+
+.x-small[
+```html
+<p>엄청 길다... {{variable}} 또 길다...</p>
+<p>이건 괜찮음... <span ng-bind="variable"></span> 이건 괜찮음...</p>
+```]
+
+---
+# AngularJS 내부 동작과 성능
+
+ng-repeat
+
+- AngularJS에서 가장 유용한 디렉티브지만.... 성능에 민감
+- $digest 루프를 돌 때마다 컬렉션을 적지 않게 조사해야 하고, 변경을 감지하면 영향 받는 DOM 재구성도 필요
+- watch 바인딩 기준으로 수천개 수준은 알맞지 않다
+- 필터링이나 페이징, 사용자 정의 디렉티브를 만들어서 사용
+
+---
+# 유용한 툴 소개
+
+- Batarang - 크롬 확장프로그램으로 모델 정보와 성능 측정을 도와줌
+- [Plunker](http://plnkr.co/) - Online Editor, AngularJS로 구현됨
+- http://ngmodules.org/ - 자신이 만든 모듈을 공유하는 사이트
 
 ---
 # 참고서적 및 웹페이지
 
 - http://www.yes24.com/24/goods/13527426?scode=032
 - http://www.yes24.com/24/goods/9375384?scode=032
+- https://docs.angularjs.org/guide
 - http://helloworld.naver.com/helloworld/639204
 - http://soomong.net/blog/2014/01/20/translation-ultimate-guide-to-learning-angularjs-in-one-day/
 - http://www.nextree.co.kr/tag/angularjs/
+
+---
+# Midas Web
+
+- Midas Web UI도 AngularJS로 구현되어 있습니다.
 
 ---
 name: last-page
