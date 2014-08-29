@@ -358,7 +358,9 @@ ng-repeat
 ---
 # Midas Web
 
-- Midas Web UI도 AngularJS로 구현되어 있습니다.
+Midas Web UI도 AngularJS로 구현되어 있습니다.
+
+.img-90[ ![](img/midas-webui-2.png) ]
 
 ---
 name: last-page
